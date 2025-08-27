@@ -1,0 +1,193 @@
+🚀 React + Express Chatbot Portfolio (Groq API + Vercel/Render Deployable)
+🔹 Features
+
+Split Screen Layout
+
+Left panel → photo, project carousel, resume PDF, certificates, skill infographics.
+
+Right panel → AI chatbot powered by Groq.
+
+Dynamic Content
+
+Chatbot sends signals → left panel updates (switch between photo, resume, projects, skills).
+
+Modern Styling
+
+Tailwind CSS + Framer Motion animations.
+
+AI Chat
+
+Groq API integration via Express backend.
+
+🔹 Architecture
+root/
+ ├─ client/               # React frontend
+ │   ├─ src/
+ │   │   ├─ components/
+ │   │   │   ├─ LeftPanel.jsx
+ │   │   │   ├─ Chatbot.jsx
+ │   │   │   ├─ Message.jsx
+ │   │   │   └─ ProjectCard.jsx
+ │   │   ├─ assets/       # images, resume.pdf
+ │   │   ├─ App.jsx
+ │   │   └─ index.js
+ │   └─ package.json
+ │
+ ├─ server/               # Express backend
+ │   ├─ index.js
+ │   └─ routes/chat.js
+ │   └─ package.json
+ │
+ ├─ README.md
+ └─ package.json          # root workspace
+
+🔹 Backend (Express + Groq)
+
+server/index.js
+
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import Groq from "groq-sdk";
+
+dotenv.config();
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { messages } = req.body;
+    const chatCompletion = await client.chat.completions.create({
+      model: "mixtral-8x7b-32768",
+      messages,
+    });
+    res.json({ reply: chatCompletion.choices[0].message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(5000, () => console.log("Server running on port 5000"));
+
+🔹 Frontend (React + Tailwind)
+
+client/src/components/Chatbot.jsx
+
+import { useState } from "react";
+
+export default function Chatbot({ onAction }) {
+  const [messages, setMessages] = useState([
+    { role: "assistant", content: "👋 Hi! I’m Arjun’s AI Portfolio. Ask me about projects, resume, or skills." }
+  ]);
+  const [input, setInput] = useState("");
+
+  const sendMessage = async () => {
+    if (!input) return;
+
+    const newMsg = { role: "user", content: input };
+    setMessages([...messages, newMsg]);
+
+    const res = await fetch("http://localhost:5000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [...messages, newMsg] }),
+    });
+
+    const data = await res.json();
+    setMessages([...messages, newMsg, data.reply]);
+
+    // Example: detect commands for LeftPanel
+    if (input.toLowerCase().includes("resume")) onAction("resume");
+    if (input.toLowerCase().includes("project")) onAction("projects");
+    if (input.toLowerCase().includes("skills")) onAction("skills");
+
+    setInput("");
+  };
+
+  return (
+    <div className="flex flex-col h-full p-4">
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {messages.map((msg, i) => (
+          <div key={i} className={msg.role === "assistant" ? "text-green-400" : "text-blue-400"}>
+            {msg.content}
+          </div>
+        ))}
+      </div>
+      <div className="flex mt-4">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="flex-1 rounded-l-lg px-3 py-2 text-black"
+          placeholder="Ask me about Arjun..."
+        />
+        <button onClick={sendMessage} className="bg-blue-600 px-4 py-2 rounded-r-lg">
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+client/src/components/LeftPanel.jsx
+
+import { useState } from "react";
+
+export default function LeftPanel({ view }) {
+  return (
+    <div className="flex items-center justify-center h-full p-6">
+      {view === "photo" && <img src="/assets/arjun.jpg" alt="Arjun" className="rounded-xl shadow-lg" />}
+      {view === "resume" && <iframe src="/assets/resume.pdf" className="w-full h-full rounded-xl"></iframe>}
+      {view === "projects" && <img src="/assets/ai_interview.png" alt="Project" className="rounded-lg" />}
+      {view === "skills" && <img src="/assets/skills.png" alt="Skills" className="rounded-lg" />}
+    </div>
+  );
+}
+
+
+client/src/App.jsx
+
+import { useState } from "react";
+import Chatbot from "./components/Chatbot";
+import LeftPanel from "./components/LeftPanel";
+
+export default function App() {
+  const [view, setView] = useState("photo");
+
+  return (
+    <div className="flex w-screen h-screen">
+      <div className="w-1/2 bg-gray-900 border-r border-gray-700">
+        <LeftPanel view={view} />
+      </div>
+      <div className="w-1/2 bg-gray-950">
+        <Chatbot onAction={setView} />
+      </div>
+    </div>
+  );
+}
+
+🔹 Deployment Plan
+Frontend
+
+Push React app (client/) to GitHub.
+
+Connect GitHub repo to Vercel → Deploy frontend.
+
+Backend
+
+Deploy Express server (server/) to Render or Railway (both free for small apps).
+
+Add GROQ_API_KEY as environment variable.
+
+Update React frontend fetch URL to deployed backend endpoint.
+
+✅ Result:
+
+Recruiter visits → chats with Groq-powered assistant.
+
+Left panel switches dynamically → photo, resume, projects, or skills.
+
+Hosted fully with Vercel (frontend) + Render (backend).
